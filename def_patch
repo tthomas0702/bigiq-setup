@@ -1,0 +1,24 @@
+def patch(address, url, auth_token, patch_data):
+    headers = {'Content-type': 'application/json',
+               'X-F5-Auth-Token': auth_token}
+    patch_json = json.dumps(patch_data)
+    try:
+        connection = http.client.HTTPSConnection(address)
+        connection.request('PATCH', url, patch_json, headers)
+    except ConnectionError:
+        print('ConnectionError')
+        sys.exit(0)
+    except:
+        raise
+        sys.exit(0)
+    r1 = connection.getresponse()
+    if opt.debug:
+        print(r1.status)
+        print(r1.reason)
+    if r1.status != 200:
+        print(r1.status)
+        print(r1.reason)
+        sys.exit(1)
+    data1 = r1.read()
+    return data1.decode("utf-8")
+
