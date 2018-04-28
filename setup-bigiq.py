@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Tim Thomas 2018
-# Ver 0.0.0
+# Ver 0.0.1
 
 import argparse
 import json
