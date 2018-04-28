@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 
 # Tim Thomas 2018
-# Ver 0.0.1
+# Ver 0.0.2
 
 import argparse
 import json
 import http.client
-#import urllib
+# import urllib
 import sys
 from pprint import pprint
 
@@ -80,13 +80,14 @@ parser.add_argument('-s',
                     '--self',
                     action="store",
                     dest="self",
-                    help='Set selfIP/mask and set it as discovery address 10.1.212.100/16' )
+                    help='selfIP/mask and set it as \
+                            discovery address 10.1.212.100/16')
 
 parser.add_argument('-R',
                     '--route',
                     action="store",
                     dest="route",
-                    help='management-route' )
+                    help='management-route')
 
 parser.add_argument('-N',
                     '--ntp',
@@ -102,6 +103,13 @@ parser.add_argument('-D',
                     default='10.3.254.53',
                     help='IP address DNS server')
 
+parser.add_argument('-k',
+                    '--key',
+                    action="store",
+                    dest="key",
+                    #default="Big-iq12345678910",
+                    help='Masterkey passphrase string')
+
 
 
 opt = parser.parse_args()
@@ -115,6 +123,9 @@ if opt.address is None:
 
 if opt.route is None:
     parser.error("-R mgmt route required")
+    
+if opt.mgmt is None:
+    parser.error("-m managmet-ip is required, x.x.x.x/cidr")
 
 if opt.debug is True:
     print(opt)
@@ -200,7 +211,7 @@ def post(address, url, auth_token, post_data):
     if r1.status != 200:
         print(r1.status)
         print(r1.reason)
-        sys.exit(1)
+        #sys.exit(1)
     data1 = r1.read()
     return data1.decode("utf-8")
 
@@ -229,6 +240,7 @@ def patch(address, url, auth_token, patch_data):
     data1 = r1.read()
     return data1.decode("utf-8")
 
+
 def put(address, url, auth_token, put_data):
     headers = {'Content-type': 'application/json',
                'X-F5-Auth-Token': auth_token}
@@ -254,36 +266,72 @@ def put(address, url, auth_token, put_data):
     return data1.decode("utf-8")
 
 
-
 # get auth_token, need thisd for every operation
 auth_token = get_auth_token(opt.username, opt.password, opt.address)
-#print(auth_token)
+
 
 # set personality
-data = {"systemPersonality":opt.role}
+data = {"systemPersonality": opt.role}
 print("setting ", data)
-set_personality = post(opt.address, '/mgmt/cm/system/provisioning', auth_token, data)
+url = '/mgmt/cm/system/provisioning'
+set_personality = post(
+                        opt.address,
+                        url,
+                        auth_token,
+                        data)
 
 
 # easy-setup
 if opt.self:
     discovery = opt.self.split('/')[0]
+    selfIp = opt.self
+else:
+    selfIp = None
 
 data = {
         "hostname": opt.name,
         "managementIpAddress": opt.mgmt,
         "managementRouteAddress": opt.route,
-        "internalSelfIpAddresses":[opt.self],
+        "internalSelfIpAddresses": [selfIp],
         "ntpServerAddresses": [opt.ntp],
         "dnsServerAddresses": [opt.dns],
         "dnsSearchDomains": ["localhost"]
         }
 
+if opt.self is None:
+    data["internalSelfIpAddresses"] = []
 
+url = '/mgmt/shared/system/easy-setup'
+print("Doing easy-setup")
+pprint(data)
+easy_result = patch(opt.address, url, auth_token, data)
 
+# set discovery
+try:
+    if discovery:
+        print("Setting discovery ", discovery)
+        url = '/mgmt/shared/identified-devices/config/discovery'
+        data = {"discoveryAddress": discovery}
+        set_discovery = put(
+                            opt.address,
+                            url,
+                            auth_token,
+                            data)
+except NameError:
+    print("Not setting discovery address")
 
-
-
-
-
+# master key POST
+# need to do get to see if set, if already set give message and do noting
+# if not set check for opt.key and set or errror asking for -k 
+if opt.key:
+    url = '/mgmt/cm/shared/secure-storage/masterkey'
+    data = {"passphrase": opt.key}
+    set_masterkey = post(
+                            opt.address,
+                            url,
+                            auth_token,
+                            data)
+    print(dir(set_masterkey))
+    print(set_masterkey)
+    print("eand")
 
