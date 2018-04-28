@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 
 # Tim Thomas 2018
-# Ver 0.0.2
+# Ver 0.0.3
 
 import argparse
 import json
 import http.client
 # import urllib
+import ast
 import sys
 from pprint import pprint
 
@@ -321,17 +322,34 @@ except NameError:
     print("Not setting discovery address")
 
 # master key POST
-# need to do get to see if set, if already set give message and do noting
-# if not set check for opt.key and set or errror asking for -k 
-if opt.key:
-    url = '/mgmt/cm/shared/secure-storage/masterkey'
-    data = {"passphrase": opt.key}
-    set_masterkey = post(
-                            opt.address,
-                            url,
-                            auth_token,
-                            data)
-    print(dir(set_masterkey))
-    print(set_masterkey)
-    print("eand")
+# check if masterkey set
+url = '/mgmt/cm/shared/secure-storage/masterkey'
+mk_result = json.loads(get(opt.address, url, auth_token))
+mk_set_status = mk_result["isMkSet"]
+print("isMkSet is:", mk_set_status)
+# set master key if not net
+if mk_set_status is False:
+    if opt.key is None:
+        print("Masterkey is not set yet, -k <passphrase is required")
+        sys.exit()
+    else:
+        print("Setting Masterkey")
+        url = '/mgmt/cm/shared/secure-storage/masterkey'
+        data = {"passphrase": opt.key}
+        master_set_result = post(
+                        opt.address,
+                        url,
+                        auth_token,
+                        data)
+else:
+    if opt.key is not None:
+        print("Masterkey can only be set once, not setting")
+
+
+
+
+
+
+
+
 
