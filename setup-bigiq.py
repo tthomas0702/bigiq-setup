@@ -1,13 +1,34 @@
 #!/usr/bin/python3
 
-# Tim Thomas 2018
-# Ver 0.0.4
+'''
+File name: setup-bigiq.py
+Author: Tim Thomas
+Date created: 4/28/2018
+Date last modified: 4/29/2018
+Python Version: 3.6.5
+version 0.0.5
+
+Example:
+./setup-bigiq.py \
+    --address 10.3.212.100 \
+    --name bigiq-bed1.hiep.piv \
+    --route 10.3.254.254 \
+    --role big_iq \
+    --mgmt 10.3.212.100/16 \
+    --self 10.1.212.100/16 \
+    --key Big-iq12345678910 \
+    --new-admin-pass fakepass \
+    --current-root-pass fakepass \
+    --new-root newpass	
+    
+
+
+'''
 
 import argparse
 import json
 import http.client
 # import urllib
-import ast
 import sys
 from pprint import pprint
 
@@ -17,12 +38,6 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 parser = argparse.ArgumentParser(
         description='Script to deploy iApp for NAT repros to PD')
-
-parser.add_argument('-l',
-                    '--list',
-                    action="store_true",
-                    default=False,
-                    help='list currently deployed nats')
 
 parser.add_argument('-d',
                     '--debug',
@@ -51,44 +66,44 @@ parser.add_argument('-p',
                     default='admin',
                     help='password for auth to BIG-IQ')
 
-parser.add_argument('-c',
-                    '--create',
+parser.add_argument('-P',
+                    '--new-admin-pass',
                     action="store",
-                    dest="create",
-                    help='Create and deploy nat Iapp, take name as arg and \
-                            requires --nat and --managmenet-ip')
+                    dest="newAdminPass",
+                    #default='admin',
+                    help='New admin password to set')
 
 parser.add_argument('-n',
                     '--name',
                     action="store",
                     dest="name",
-                    help='fully qualified hostname')
+                    help='fully qualified hostname to set for BIG-IQ')
 
 parser.add_argument('-m',
                     '--mgmt',
                     action="store",
                     dest="mgmt",
-                    help='Management-ip of BIG-IQ')
+                    help='Management-ip  to set on BIG-IQ')
 
 parser.add_argument('-r',
                     '--role',
                     action="store",
                     dest="role",
                     default='big_iq',
-                    help='Set to be big_iq or logging_node')
+                    help='Set BIG-IQ role to be big_iq or logging_node')
 
 parser.add_argument('-s',
                     '--self',
                     action="store",
                     dest="self",
-                    help='selfIP/mask and set it as \
+                    help='set selfIP/mask and set it as \
                             discovery address 10.1.212.100/16')
 
 parser.add_argument('-R',
                     '--route',
                     action="store",
                     dest="route",
-                    help='management-route')
+                    help='management-route to set on BIG-IQ')
 
 parser.add_argument('-N',
                     '--ntp',
@@ -111,6 +126,19 @@ parser.add_argument('-k',
                     #default="Big-iq12345678910",
                     help='Masterkey passphrase string')
 
+parser.add_argument('-cr',
+                    '--current-root-pass',
+                    action="store",
+                    dest="currentRoot",
+                    help='current root password when setting new root password')
+
+parser.add_argument('-nr',
+                    '--new-root',
+                    action="store",
+                    dest="newrootPass",
+                    help='New root pass when setting root password')
+
+
 
 
 opt = parser.parse_args()
@@ -127,6 +155,13 @@ if opt.route is None:
     
 if opt.mgmt is None:
     parser.error("-m managmet-ip is required, x.x.x.x/cidr")
+
+# root old and new pass required together
+if opt.currentRoot or opt.newrootPass is not None:
+    if opt.currentRoot is None or opt.newrootPass is None:
+        print("Both --current-root and --new-root are required when setting \
+                new root password")
+        sys.exit()
 
 if opt.debug is True:
     print(opt)
@@ -346,19 +381,42 @@ else:
         print("Masterkey can only be set once, not setting")
 
 
-# skipping admin pass for now
+# admin password PUT
+if opt.newAdminPass is not None:
+    print("Setting admin password")
+    url = '/mgmt/shared/authz/users'
+    data = {
+            "name": "admin",
+            "displayName": "Admin User",
+            "oldPassword": opt.password,
+            "password": opt.newAdminPass,
+            "password2": opt.newAdminPass
+            }
+    
+    set_admin_pass = json.loads(put(opt.address, url, auth_token, data))
 
-# skipping root pass for now
+
+# POST root pass
+if opt.newrootPass:
+    print("Setting new root password")
+    url = '/mgmt/shared/authn/root'
+    data = {"oldPassword": opt.currentRoot, "newPassword": opt.newrootPass}
+
+    set_result = json.loads(post(opt.address, url, auth_token, data))
+    if set_result["code"] == 400:
+        print("Error setting root password, not setting")
+        print(set_result["message"])
+    
 
 # PATCH {"isSystemSetup":true}
-print("Setting setup finished")
+print("Setup finished")
 url = '/mgmt/shared/system/setup'
 data = {"isSystemSetup": True}
 setup_done = patch(opt.address, url, auth_token, data)
 
 
 #  PATCH {"restart":true}
-print("restarting system")
+print("restarting system...")
 url = '/mgmt/shared/failover-state'
 t = 'true'
 data = {"restart":t}
@@ -366,6 +424,6 @@ restart_result = patch(opt.address, url, auth_token, data)
 
 
 # test command
-# setup-bigiq.py -a 10.3.212.100 -n bigiq-bed1.hiep.piv -R 10.3.254.254 -r big_iq -m 10.3.212.100/16 -s 10.1.212.100/16 -k Big-iq12345678910
+# setup-bigiq.py -a 10.3.212.100 -n bigiq-bed1.hiep.piv -R 10.3.254.254 -r big_iq -m 10.3.212.100/16 -s 10.1.212.100/16 -k Big-iq12345678910 -P f5site -cr default -nr f5site
 
 
