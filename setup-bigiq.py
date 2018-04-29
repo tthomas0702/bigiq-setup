@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Tim Thomas 2018
-# Ver 0.0.3
+# Ver 0.0.4
 
 import argparse
 import json
@@ -346,10 +346,26 @@ else:
         print("Masterkey can only be set once, not setting")
 
 
+# skipping admin pass for now
+
+# skipping root pass for now
+
+# PATCH {"isSystemSetup":true}
+print("Setting setup finished")
+url = '/mgmt/shared/system/setup'
+data = {"isSystemSetup": True}
+setup_done = patch(opt.address, url, auth_token, data)
 
 
+#  PATCH {"restart":true}
+print("restarting system")
+url = '/mgmt/shared/failover-state'
+t = 'true'
+data = {"restart":t}
+restart_result = patch(opt.address, url, auth_token, data)
 
 
-
+# test command
+# setup-bigiq.py -a 10.3.212.100 -n bigiq-bed1.hiep.piv -R 10.3.254.254 -r big_iq -m 10.3.212.100/16 -s 10.1.212.100/16 -k Big-iq12345678910
 
 
