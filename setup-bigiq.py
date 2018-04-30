@@ -6,21 +6,21 @@ Author: Tim Thomas
 Date created: 4/28/2018
 Date last modified: 4/29/2018
 Python Version: 3.6.5
-version 0.0.5
+version 0.0.6
 
 Example:
 ./setup-bigiq.py \
-    --address 10.3.212.100 \
-    --name bigiq-bed1.hiep.piv \
-    --route 10.3.254.254 \
+    --address 192.0.2.100 \
+    --name bigiq-bed1.example.com \
+    --route 192.0.2.254 \
     --role big_iq \
-    --mgmt 10.3.212.100/16 \
-    --self 10.1.212.100/16 \
-    --key Big-iq12345678910 \
+    --mgmt 192.0.2.100/24 \
+    --self 192.0.2.100/24 \
+    --key passExample-ou812 \
     --new-admin-pass fakepass \
     --current-root-pass fakepass \
-    --new-root newpass	
-    
+    --new-root newpass
+
 
 
 '''
@@ -28,13 +28,12 @@ Example:
 import argparse
 import json
 import http.client
-# import urllib
 import sys
 from pprint import pprint
-
 # disable ssl cert verfiy
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
+
 
 parser = argparse.ArgumentParser(
         description='Script to deploy iApp for NAT repros to PD')
@@ -49,7 +48,6 @@ parser.add_argument('-a',
                     '--address',
                     action="store",
                     dest="address",
-                    default='10.154.164.129',
                     help='IP address of BIG-IQ to be setup')
 
 parser.add_argument('-u',
@@ -97,7 +95,7 @@ parser.add_argument('-s',
                     action="store",
                     dest="self",
                     help='set selfIP/mask and set it as \
-                            discovery address 10.1.212.100/16')
+                            discovery address 192.0.2.100/24')
 
 parser.add_argument('-R',
                     '--route',
@@ -130,15 +128,14 @@ parser.add_argument('-cr',
                     '--current-root-pass',
                     action="store",
                     dest="currentRoot",
-                    help='current root password when setting new root password')
+                    help='current root password when setting new root \
+                            password')
 
 parser.add_argument('-nr',
                     '--new-root',
                     action="store",
                     dest="newrootPass",
                     help='New root pass when setting root password')
-
-
 
 
 opt = parser.parse_args()
@@ -152,7 +149,7 @@ if opt.address is None:
 
 if opt.route is None:
     parser.error("-R mgmt route required")
-    
+
 if opt.mgmt is None:
     parser.error("-m managmet-ip is required, x.x.x.x/cidr")
 
@@ -356,7 +353,6 @@ try:
 except NameError:
     print("Not setting discovery address")
 
-# master key POST
 # check if masterkey set
 url = '/mgmt/cm/shared/secure-storage/masterkey'
 mk_result = json.loads(get(opt.address, url, auth_token))
@@ -382,7 +378,7 @@ else:
 
 
 # admin password PUT
-if opt.newAdminPass is not None:
+if opt.newAdminPass:
     print("Setting admin password")
     url = '/mgmt/shared/authz/users'
     data = {
@@ -392,21 +388,21 @@ if opt.newAdminPass is not None:
             "password": opt.newAdminPass,
             "password2": opt.newAdminPass
             }
-    
     set_admin_pass = json.loads(put(opt.address, url, auth_token, data))
 
 
 # POST root pass
 if opt.newrootPass:
-    print("Setting new root password")
     url = '/mgmt/shared/authn/root'
     data = {"oldPassword": opt.currentRoot, "newPassword": opt.newrootPass}
 
     set_result = json.loads(post(opt.address, url, auth_token, data))
-    if set_result["code"] == 400:
-        print("Error setting root password, not setting")
-        print(set_result["message"])
-    
+    try:
+        if set_result['code'] == 400:
+            print("Error setting root password, not setting")
+            print(set_result["message"])
+    except:
+        print("Setting new root password")
 
 # PATCH {"isSystemSetup":true}
 print("Setup finished")
@@ -419,11 +415,5 @@ setup_done = patch(opt.address, url, auth_token, data)
 print("restarting system...")
 url = '/mgmt/shared/failover-state'
 t = 'true'
-data = {"restart":t}
+data = {"restart": t}
 restart_result = patch(opt.address, url, auth_token, data)
-
-
-# test command
-# setup-bigiq.py -a 10.3.212.100 -n bigiq-bed1.hiep.piv -R 10.3.254.254 -r big_iq -m 10.3.212.100/16 -s 10.1.212.100/16 -k Big-iq12345678910 -P f5site -cr default -nr f5site
-
-
