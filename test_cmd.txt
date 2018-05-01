@@ -1,3 +1,0 @@
-# test command
-# setup-bigiq.py -a 10.3.212.100 -n bigiq-bed1.hiep.piv -R 10.3.254.254 -r big_iq -m 10.3.212.100/16 -s 10.1.212.100/16 -k Big-iq12345678910 -P f5site -cr default -nr f5site
-
