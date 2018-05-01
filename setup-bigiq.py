@@ -6,7 +6,9 @@ Author: Tim Thomas
 Date created: 4/28/2018
 Date last modified: 4/29/2018
 Python Version: 3.6.5
-version 0.0.6
+version:
+    0.0.6
+    0.0.7 fix auth token, removed  'loginProviderName': 'local'  
 
 Example:
 ./setup-bigiq.py \
@@ -201,8 +203,7 @@ def delete(address, url, auth_token):
 def get_auth_token(username, password, address):
     headers = {'Content-type': 'application/json'}
     post_dict = {"username": username,
-                 "password": password,
-                 "loginProviderName": "tmos"}
+                 "password": password}
     post_json = json.dumps(post_dict)
     try:
         connection = http.client.HTTPSConnection(opt.address)
