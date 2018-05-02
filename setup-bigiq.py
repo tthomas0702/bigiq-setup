@@ -9,6 +9,7 @@ Python Version: 3.6.5
 version:
     0.0.6
     0.0.7 fix auth token, removed  'loginProviderName': 'local'  
+    0.0.8 added cidr example to -mgmt help 
 
 Example:
 ./setup-bigiq.py \
@@ -83,7 +84,7 @@ parser.add_argument('-m',
                     '--mgmt',
                     action="store",
                     dest="mgmt",
-                    help='Management-ip  to set on BIG-IQ')
+                    help='Management-ip  to set on BIG-IQ x.x.x.x/cidr')
 
 parser.add_argument('-r',
                     '--role',
