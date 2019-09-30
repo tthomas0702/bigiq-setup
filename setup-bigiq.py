@@ -31,6 +31,7 @@ Example:
 import argparse
 import json
 import http.client
+import re
 import sys
 from pprint import pprint
 # disable ssl cert verfiy
@@ -110,7 +111,7 @@ parser.add_argument('-N',
                     '--ntp',
                     action="store",
                     dest="ntp",
-                    default='192.168.11.168',
+                    default='172.23.241.134',
                     help='ntp server')
 
 parser.add_argument('-D',
@@ -156,6 +157,7 @@ if opt.route is None:
 if opt.mgmt is None:
     parser.error("-m managmet-ip is required, x.x.x.x/cidr")
 
+
 # root old and new pass required together
 if opt.currentRoot or opt.newrootPass is not None:
     if opt.currentRoot is None or opt.newrootPass is None:
@@ -163,8 +165,22 @@ if opt.currentRoot or opt.newrootPass is not None:
                 new root password")
         sys.exit()
 
+
 if opt.debug is True:
     print(opt)
+
+# make sure -n value is FQDN
+def is_valid_hostname(hostname):
+    if len(hostname) > 255:
+        return False
+    if hostname[-1] == ".":
+        hostname = hostname[:-1] # strip exactly one dot from the right, if present
+    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    return all(allowed.match(x) for x in hostname.split("."))
+
+if is_valid_hostname(opt.name) is False:
+    parser.error("-n value provided does not conform to FQDN standards")
+
 
 
 def get(address, url, auth_token):
