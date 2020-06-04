@@ -40,7 +40,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 
 parser = argparse.ArgumentParser(
-        description='Script to deploy iApp for NAT repros to PD')
+        description='Do intial BIG-IQ setup on versions 5.x - 7.0.x. Will not work 7.1.x')
 
 parser.add_argument('-d',
                     '--debug',
