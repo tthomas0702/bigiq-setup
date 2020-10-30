@@ -1,4 +1,4 @@
-This script is only valid for 7.0 and bleow. 
+This script is only valid for 7.0 and below. 
 
 ************* For version 7.1 *************
 
